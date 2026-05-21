@@ -14,4 +14,8 @@ category?: string;
 salaryMin?: number;
 salaryMax?: number;
 featured?: boolean;
+/**
+ * newest, oldest, salary-high, salary-low, most-applied
+ */
+sortBy?: string;
 };

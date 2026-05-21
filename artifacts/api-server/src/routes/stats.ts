@@ -64,6 +64,7 @@ router.get("/stats/recent-jobs", async (_req, res): Promise<void> => {
       salaryMax: jobsTable.salaryMax,
       currency: jobsTable.currency,
       featured: jobsTable.featured,
+      viewCount: jobsTable.viewCount,
       createdAt: jobsTable.createdAt,
       expiresAt: jobsTable.expiresAt,
       applicationCount: sql<number>`cast(count(${applicationsTable.id}) as int)`,
@@ -75,6 +76,20 @@ router.get("/stats/recent-jobs", async (_req, res): Promise<void> => {
     .limit(6);
 
   res.json(jobs);
+});
+
+router.get("/stats/applications-over-time", async (_req, res): Promise<void> => {
+  const rows = await db.execute(sql`
+    SELECT
+      to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') as date,
+      cast(count(*) as int) as count
+    FROM applications
+    WHERE created_at >= NOW() - INTERVAL '30 days'
+    GROUP BY date
+    ORDER BY date ASC
+  `);
+
+  res.json(rows.rows);
 });
 
 export default router;

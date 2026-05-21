@@ -29,6 +29,7 @@ export interface Job {
   currency?: string;
   featured: boolean;
   applicationCount: number;
+  viewCount: number;
   createdAt: string;
   /** @nullable */
   expiresAt?: string | null;
@@ -86,6 +87,25 @@ export interface Application {
   createdAt: string;
 }
 
+export interface ApplicationWithJob {
+  id: number;
+  jobId: number;
+  applicantName: string;
+  applicantEmail: string;
+  /** @nullable */
+  coverLetter?: string | null;
+  /** @nullable */
+  resumeUrl?: string | null;
+  status: string;
+  createdAt: string;
+  jobTitle: string;
+  company: string;
+  location: string;
+  jobType: string;
+  /** @nullable */
+  companyLogo?: string | null;
+}
+
 export interface ApplicationInput {
   /** @minLength 1 */
   applicantName: string;
@@ -111,6 +131,11 @@ export interface CategoryStat {
   count: number;
 }
 
+export interface DailyStat {
+  date: string;
+  count: number;
+}
+
 export type ListJobsParams = {
 search?: string;
 location?: string;
@@ -119,5 +144,17 @@ category?: string;
 salaryMin?: number;
 salaryMax?: number;
 featured?: boolean;
+/**
+ * newest, oldest, salary-high, salary-low, most-applied
+ */
+sortBy?: string;
+};
+
+export type IncrementJobView200 = {
+  viewCount: number;
+};
+
+export type ListApplicationsParams = {
+email?: string;
 };
 

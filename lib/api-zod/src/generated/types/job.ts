@@ -26,6 +26,7 @@ export interface Job {
   currency?: string;
   featured: boolean;
   applicationCount: number;
+  viewCount: number;
   createdAt: Date;
   /** @nullable */
   expiresAt?: Date | null;

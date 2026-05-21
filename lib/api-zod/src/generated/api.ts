@@ -26,7 +26,8 @@ export const ListJobsQueryParams = zod.object({
   "category": zod.coerce.string().optional(),
   "salaryMin": zod.coerce.number().optional(),
   "salaryMax": zod.coerce.number().optional(),
-  "featured": zod.coerce.boolean().optional()
+  "featured": zod.coerce.boolean().optional(),
+  "sortBy": zod.coerce.string().optional()
 })
 
 export const ListJobsResponseItem = zod.object({
@@ -45,6 +46,7 @@ export const ListJobsResponseItem = zod.object({
   "currency": zod.string().optional(),
   "featured": zod.boolean(),
   "applicationCount": zod.number(),
+  "viewCount": zod.number(),
   "createdAt": zod.coerce.date(),
   "expiresAt": zod.coerce.date().nullish()
 })
@@ -101,6 +103,7 @@ export const GetJobResponse = zod.object({
   "currency": zod.string().optional(),
   "featured": zod.boolean(),
   "applicationCount": zod.number(),
+  "viewCount": zod.number(),
   "createdAt": zod.coerce.date(),
   "expiresAt": zod.coerce.date().nullish()
 })
@@ -146,6 +149,7 @@ export const UpdateJobResponse = zod.object({
   "currency": zod.string().optional(),
   "featured": zod.boolean(),
   "applicationCount": zod.number(),
+  "viewCount": zod.number(),
   "createdAt": zod.coerce.date(),
   "expiresAt": zod.coerce.date().nullish()
 })
@@ -156,6 +160,18 @@ export const UpdateJobResponse = zod.object({
  */
 export const DeleteJobParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Increment view count for a job
+ */
+export const IncrementJobViewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const IncrementJobViewResponse = zod.object({
+  "viewCount": zod.number()
 })
 
 
@@ -195,6 +211,31 @@ export const ApplyToJobBody = zod.object({
   "coverLetter": zod.string().optional(),
   "resumeUrl": zod.string().optional()
 })
+
+
+/**
+ * @summary List applications, optionally filtered by applicant email
+ */
+export const ListApplicationsQueryParams = zod.object({
+  "email": zod.coerce.string().optional()
+})
+
+export const ListApplicationsResponseItem = zod.object({
+  "id": zod.number(),
+  "jobId": zod.number(),
+  "applicantName": zod.string(),
+  "applicantEmail": zod.string(),
+  "coverLetter": zod.string().nullish(),
+  "resumeUrl": zod.string().nullish(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "jobTitle": zod.string(),
+  "company": zod.string(),
+  "location": zod.string(),
+  "jobType": zod.string(),
+  "companyLogo": zod.string().nullish()
+})
+export const ListApplicationsResponse = zod.array(ListApplicationsResponseItem)
 
 
 /**
@@ -260,9 +301,20 @@ export const GetRecentJobsResponseItem = zod.object({
   "currency": zod.string().optional(),
   "featured": zod.boolean(),
   "applicationCount": zod.number(),
+  "viewCount": zod.number(),
   "createdAt": zod.coerce.date(),
   "expiresAt": zod.coerce.date().nullish()
 })
 export const GetRecentJobsResponse = zod.array(GetRecentJobsResponseItem)
+
+
+/**
+ * @summary Application counts per day for last 30 days
+ */
+export const GetApplicationsOverTimeResponseItem = zod.object({
+  "date": zod.string(),
+  "count": zod.number()
+})
+export const GetApplicationsOverTimeResponse = zod.array(GetApplicationsOverTimeResponseItem)
 
 

@@ -63,6 +63,11 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            description: newest, oldest, salary-high, salary-low, most-applied
       responses:
         "200":
           description: List of jobs
@@ -147,6 +152,30 @@ paths:
         "204":
           description: Deleted
 
+  /jobs/{id}/view:
+    post:
+      operationId: incrementJobView
+      tags: [jobs]
+      summary: Increment view count for a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: View count incremented
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - viewCount
+                properties:
+                  viewCount:
+                    type: integer
+
   /jobs/{id}/applications:
     get:
       operationId: listJobApplications
@@ -190,6 +219,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Application"
+
+  /applications:
+    get:
+      operationId: listApplications
+      tags: [applications]
+      summary: List applications, optionally filtered by applicant email
+      parameters:
+        - name: email
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Applications with job details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApplicationWithJob"
 
   /applications/{id}/status:
     patch:
@@ -259,6 +309,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/Job"
 
+  /stats/applications-over-time:
+    get:
+      operationId: getApplicationsOverTime
+      tags: [stats]
+      summary: Application counts per day for last 30 days
+      responses:
+        "200":
+          description: Applications over time
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyStat"
+
 components:
   schemas:
     HealthStatus:
@@ -284,6 +349,7 @@ components:
         - featured
         - createdAt
         - applicationCount
+        - viewCount
       properties:
         id:
           type: integer
@@ -316,6 +382,8 @@ components:
         featured:
           type: boolean
         applicationCount:
+          type: integer
+        viewCount:
           type: integer
         createdAt:
           type: string
@@ -432,6 +500,48 @@ components:
           type: string
           format: date-time
 
+    ApplicationWithJob:
+      type: object
+      required:
+        - id
+        - jobId
+        - applicantName
+        - applicantEmail
+        - status
+        - createdAt
+        - jobTitle
+        - company
+        - location
+        - jobType
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        applicantName:
+          type: string
+        applicantEmail:
+          type: string
+        coverLetter:
+          type: ["string", "null"]
+        resumeUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        jobTitle:
+          type: string
+        company:
+          type: string
+        location:
+          type: string
+        jobType:
+          type: string
+        companyLogo:
+          type: ["string", "null"]
+
     ApplicationInput:
       type: object
       required:
@@ -482,6 +592,17 @@ components:
         - count
       properties:
         category:
+          type: string
+        count:
+          type: integer
+
+    DailyStat:
+      type: object
+      required:
+        - date
+        - count
+      properties:
+        date:
           type: string
         count:
           type: integer

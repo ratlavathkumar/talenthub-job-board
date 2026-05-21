@@ -17,6 +17,7 @@ export const jobsTable = pgTable("jobs", {
   salaryMax: integer("salary_max").notNull(),
   currency: text("currency").notNull().default("USD"),
   featured: boolean("featured").notNull().default(false),
+  viewCount: integer("view_count").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }),
 });

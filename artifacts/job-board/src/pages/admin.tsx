@@ -4,7 +4,10 @@ import {
   getListJobsQueryKey,
   useListJobApplications,
   useUpdateApplicationStatus,
-  getListJobApplicationsQueryKey
+  getListJobApplicationsQueryKey,
+  useGetStatsSummary,
+  useGetApplicationsOverTime,
+  useGetStatsByCategory
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Layout } from "../components/layout";
@@ -16,36 +19,189 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "../components/ui/badge";
 import { Skeleton } from "../components/ui/skeleton";
 import { useToast } from "../hooks/use-toast";
-import { formatCurrency, APPLICATION_STATUSES } from "../lib/constants";
-import { Trash2, ExternalLink, FileText, CheckCircle2, XCircle, Clock, Search } from "lucide-react";
+import { APPLICATION_STATUSES, STATUS_COLORS } from "../lib/constants";
+import { Trash2, ExternalLink, FileText, CheckCircle2, XCircle, Clock, Search, Briefcase, TrendingUp, Users, Star, PieChart as PieChartIcon, Activity } from "lucide-react";
 import { Link } from "wouter";
 import { useState } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 export default function Admin() {
   return (
     <Layout>
-      <div className="container mx-auto px-4 sm:px-8 py-10 max-w-6xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Admin Dashboard</h1>
-          <p className="text-muted-foreground">Manage job listings and applications.</p>
+      <div className="container mx-auto px-4 sm:px-8 py-12 max-w-7xl">
+        <div className="mb-10">
+          <h1 className="text-4xl font-bold tracking-tight mb-3">Admin Dashboard</h1>
+          <p className="text-lg text-muted-foreground">Manage your job board, applications, and platform analytics.</p>
         </div>
 
-        <Tabs defaultValue="jobs" className="space-y-6">
-          <TabsList className="grid w-full sm:w-[400px] grid-cols-2 h-12">
-            <TabsTrigger value="jobs" className="text-base" data-testid="tab-admin-jobs">Job Listings</TabsTrigger>
-            <TabsTrigger value="applications" className="text-base" data-testid="tab-admin-applications">Applications</TabsTrigger>
+        <Tabs defaultValue="jobs" className="space-y-8">
+          <TabsList className="grid w-full sm:w-[600px] grid-cols-3 h-14 p-1 bg-muted/50 rounded-xl">
+            <TabsTrigger value="jobs" className="text-base rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm" data-testid="tab-admin-jobs">Job Listings</TabsTrigger>
+            <TabsTrigger value="applications" className="text-base rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm" data-testid="tab-admin-applications">Applications</TabsTrigger>
+            <TabsTrigger value="analytics" className="text-base rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm" data-testid="tab-admin-analytics">Analytics</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="jobs">
+          <TabsContent value="jobs" className="mt-6">
             <JobsManager />
           </TabsContent>
           
-          <TabsContent value="applications">
+          <TabsContent value="applications" className="mt-6">
             <ApplicationsManager />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="mt-6">
+            <AnalyticsDashboard />
           </TabsContent>
         </Tabs>
       </div>
     </Layout>
+  );
+}
+
+function AnalyticsDashboard() {
+  const { data: stats, isLoading: statsLoading } = useGetStatsSummary();
+  const { data: timeData, isLoading: timeLoading } = useGetApplicationsOverTime();
+  const { data: categoryData, isLoading: catLoading } = useGetStatsByCategory();
+
+  const PIE_COLORS = [
+    "hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))",
+    "hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))"
+  ];
+
+  // Fill in missing days for last 14 days if needed
+  const chartData = [...(timeData || [])];
+
+  return (
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-card shadow-sm border-border/50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Jobs</p>
+              <div className="p-2 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg"><Briefcase className="w-5 h-5"/></div>
+            </div>
+            <p className="text-4xl font-bold">{statsLoading ? <Skeleton className="h-10 w-16" /> : stats?.totalJobs}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card shadow-sm border-border/50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">New This Week</p>
+              <div className="p-2 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg"><TrendingUp className="w-5 h-5"/></div>
+            </div>
+            <p className="text-4xl font-bold">{statsLoading ? <Skeleton className="h-10 w-16" /> : stats?.newJobsThisWeek}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card shadow-sm border-border/50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Applications</p>
+              <div className="p-2 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-lg"><Users className="w-5 h-5"/></div>
+            </div>
+            <p className="text-4xl font-bold">{statsLoading ? <Skeleton className="h-10 w-16" /> : stats?.totalApplications}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-card shadow-sm border-border/50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Featured Roles</p>
+              <div className="p-2 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-lg"><Star className="w-5 h-5"/></div>
+            </div>
+            <p className="text-4xl font-bold">{statsLoading ? <Skeleton className="h-10 w-16" /> : stats?.featuredJobs}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-muted-foreground" />
+              Applications Over Time
+            </CardTitle>
+            <CardDescription>Daily application volume for the past 14 days</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {timeLoading ? (
+              <Skeleton className="h-[280px] w-full" />
+            ) : (
+              <div className="h-[280px] w-full mt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(val) => new Date(val).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}}
+                      dy={10}
+                    />
+                    <YAxis 
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{fill: 'hsl(var(--muted-foreground))', fontSize: 12}}
+                    />
+                    <RechartsTooltip 
+                      cursor={{fill: 'hsl(var(--muted))', opacity: 0.4}}
+                      contentStyle={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))'}}
+                      labelFormatter={(label) => new Date(label).toLocaleDateString(undefined, {weekday: 'short', month: 'short', day: 'numeric'})}
+                    />
+                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieChartIcon className="w-5 h-5 text-muted-foreground" />
+              Jobs by Category
+            </CardTitle>
+            <CardDescription>Distribution of jobs across categories</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {catLoading ? (
+              <Skeleton className="h-[280px] w-full" />
+            ) : (
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={categoryData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="count"
+                      nameKey="category"
+                      stroke="none"
+                    >
+                      {categoryData?.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip 
+                      contentStyle={{backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))'}}
+                    />
+                    <Legend 
+                      verticalAlign="bottom" 
+                      height={36} 
+                      iconType="circle"
+                      formatter={(value) => <span className="text-foreground">{value}</span>}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
 
@@ -78,63 +234,63 @@ function JobsManager() {
   if (isLoading) return <SkeletonTable />;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <Card className="border-border/50 shadow-sm overflow-hidden">
+      <CardHeader className="bg-muted/10 border-b border-border/40 pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <CardTitle>Manage Jobs</CardTitle>
+            <CardTitle className="text-xl">Manage Jobs</CardTitle>
             <CardDescription>View, edit, or remove current job listings.</CardDescription>
           </div>
           <Link href="/post-job">
-            <Button size="sm">Post New Job</Button>
+            <Button size="sm" className="shadow-sm">Post New Job</Button>
           </Link>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         {jobs && jobs.length > 0 ? (
-          <div className="rounded-md border">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Job Title</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Posted</TableHead>
-                  <TableHead>Apps</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="bg-muted/30 border-b-border/40 hover:bg-muted/30">
+                  <TableHead className="font-semibold text-foreground">Job Title</TableHead>
+                  <TableHead className="font-semibold text-foreground">Company</TableHead>
+                  <TableHead className="font-semibold text-foreground">Location</TableHead>
+                  <TableHead className="font-semibold text-foreground">Posted</TableHead>
+                  <TableHead className="font-semibold text-foreground text-center">Apps</TableHead>
+                  <TableHead className="text-right font-semibold text-foreground pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {jobs.map((job) => (
-                  <TableRow key={job.id} data-testid={`row-admin-job-${job.id}`}>
-                    <TableCell className="font-medium">
+                  <TableRow key={job.id} data-testid={`row-admin-job-${job.id}`} className="group hover:bg-muted/10">
+                    <TableCell className="font-medium py-4">
                       <div className="flex items-center gap-2">
                         {job.title}
-                        {job.featured && <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">Featured</Badge>}
+                        {job.featured && <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">Featured</Badge>}
                       </div>
                     </TableCell>
-                    <TableCell>{job.company}</TableCell>
+                    <TableCell className="text-muted-foreground">{job.company}</TableCell>
                     <TableCell>
                       <div className="flex flex-col">
                         <span>{job.location}</span>
-                        {job.remote && <span className="text-xs text-muted-foreground">Remote</span>}
+                        {job.remote && <span className="text-xs text-primary/70 font-medium">Remote</span>}
                       </div>
                     </TableCell>
-                    <TableCell>{new Date(job.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-mono">{job.applicationCount}</Badge>
+                    <TableCell className="text-muted-foreground">{new Date(job.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="outline" className="font-mono bg-background">{job.applicationCount || 0}</Badge>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <TableCell className="text-right pr-4">
+                      <div className="flex items-center justify-end gap-1">
                         <Link href={`/jobs/${job.id}`}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title="View Job">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted" title="View Job">
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         </Link>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" 
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10" 
                           onClick={() => handleDelete(job.id)}
                           disabled={deleteMutation.isPending}
                           title="Delete Job"
@@ -150,7 +306,9 @@ function JobsManager() {
             </Table>
           </div>
         ) : (
-          <EmptyState title="No jobs posted yet" description="Create your first job listing to get started." />
+          <div className="p-12">
+            <EmptyState title="No jobs posted yet" description="Create your first job listing to get started." />
+          </div>
         )}
       </CardContent>
     </Card>
@@ -161,9 +319,6 @@ function ApplicationsManager() {
   const { data: jobs, isLoading: jobsLoading } = useListJobs();
   const [selectedJobId, setSelectedJobId] = useState<number | "all">("all");
   
-  // If "all" is selected, we don't have a specific API endpoint for all apps across all jobs,
-  // so we'd normally just fetch the first job's apps or implement a global list.
-  // For this scaffold, we'll enforce selecting a job to see apps if there are multiple.
   const activeJobId = selectedJobId === "all" && jobs && jobs.length > 0 ? jobs[0].id : (selectedJobId !== "all" ? selectedJobId : 0);
   
   const { data: applications, isLoading: appsLoading } = useListJobApplications(activeJobId as number, {
@@ -189,37 +344,21 @@ function ApplicationsManager() {
     );
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'reviewed': return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 border-transparent shadow-none"><CheckCircle2 className="w-3 h-3 mr-1"/> Reviewed</Badge>;
-      case 'shortlisted': return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-300 border-transparent shadow-none"><StarIcon className="w-3 h-3 mr-1"/> Shortlisted</Badge>;
-      case 'rejected': return <Badge className="bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 border-transparent shadow-none"><XCircle className="w-3 h-3 mr-1"/> Rejected</Badge>;
-      default: return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 border-transparent shadow-none"><Clock className="w-3 h-3 mr-1"/> Pending</Badge>;
-    }
-  };
-
-  // Internal tiny icon for shortlisted
-  const StarIcon = ({className}: {className?: string}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path fillRule="evenodd" d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.006 5.404.434c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.434 2.082-5.005Z" clipRule="evenodd" />
-    </svg>
-  );
-
   return (
-    <Card>
-      <CardHeader>
+    <Card className="border-border/50 shadow-sm overflow-hidden">
+      <CardHeader className="bg-muted/10 border-b border-border/40 pb-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <CardTitle>Review Applications</CardTitle>
-            <CardDescription>Manage candidate submissions.</CardDescription>
+            <CardTitle className="text-xl">Review Applications</CardTitle>
+            <CardDescription>Manage candidate submissions and statuses.</CardDescription>
           </div>
           
-          <div className="w-full sm:w-64">
+          <div className="w-full sm:w-72">
             <Select 
               value={selectedJobId.toString()} 
               onValueChange={(v) => setSelectedJobId(v === "all" ? "all" : parseInt(v))}
             >
-              <SelectTrigger data-testid="select-admin-job-filter">
+              <SelectTrigger data-testid="select-admin-job-filter" className="bg-background shadow-sm">
                 <SelectValue placeholder="Select a job" />
               </SelectTrigger>
               <SelectContent>
@@ -230,7 +369,7 @@ function ApplicationsManager() {
                     <SelectItem value="all" disabled>Select a specific job</SelectItem>
                     {jobs?.map(job => (
                       <SelectItem key={job.id} value={job.id.toString()}>
-                        {job.title} ({job.applicationCount})
+                        {job.title} ({job.applicationCount || 0})
                       </SelectItem>
                     ))}
                   </>
@@ -240,55 +379,58 @@ function ApplicationsManager() {
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         {appsLoading ? (
-          <SkeletonTable />
+          <div className="p-6"><SkeletonTable /></div>
         ) : !activeJobId ? (
-          <EmptyState title="Select a job" description="Choose a job from the dropdown to view its applications." />
+          <div className="p-12"><EmptyState title="Select a job" description="Choose a job from the dropdown to view its applications." /></div>
         ) : applications && applications.length > 0 ? (
-          <div className="rounded-md border">
+          <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Applicant</TableHead>
-                  <TableHead>Applied On</TableHead>
-                  <TableHead>Links</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Update Status</TableHead>
+                <TableRow className="bg-muted/30 border-b-border/40 hover:bg-muted/30">
+                  <TableHead className="font-semibold text-foreground">Applicant</TableHead>
+                  <TableHead className="font-semibold text-foreground">Applied On</TableHead>
+                  <TableHead className="font-semibold text-foreground">Links</TableHead>
+                  <TableHead className="font-semibold text-foreground">Status</TableHead>
+                  <TableHead className="text-right font-semibold text-foreground pr-6">Update Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {applications.map((app) => (
-                  <TableRow key={app.id} data-testid={`row-admin-app-${app.id}`}>
-                    <TableCell>
-                      <div className="font-medium">{app.applicantName}</div>
+                  <TableRow key={app.id} data-testid={`row-admin-app-${app.id}`} className="group hover:bg-muted/10">
+                    <TableCell className="py-4">
+                      <div className="font-semibold">{app.applicantName}</div>
                       <div className="text-sm text-muted-foreground">{app.applicantEmail}</div>
                     </TableCell>
-                    <TableCell>{new Date(app.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-muted-foreground">{new Date(app.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
-                        {app.resumeUrl && (
-                          <a href={app.resumeUrl} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary transition-colors" title="View Resume">
-                            <FileText className="h-5 w-5" />
-                          </a>
-                        )}
-                      </div>
+                      {app.resumeUrl ? (
+                        <a href={app.resumeUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline" title="View Resume">
+                          <FileText className="h-4 w-4" />
+                          Resume
+                        </a>
+                      ) : (
+                        <span className="text-sm text-muted-foreground italic">None</span>
+                      )}
                     </TableCell>
                     <TableCell>
-                      {getStatusBadge(app.status)}
+                      <Badge variant="outline" className={`shadow-none border-transparent ${STATUS_COLORS[app.status] || STATUS_COLORS.pending}`}>
+                        {app.status.charAt(0).toUpperCase() + app.status.slice(1)}
+                      </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right pr-4">
                       <Select 
                         value={app.status} 
                         onValueChange={(val) => handleStatusChange(app.id, val)}
                         disabled={updateStatusMutation.isPending}
                       >
-                        <SelectTrigger className="w-[130px] ml-auto h-8 text-xs" data-testid={`select-status-${app.id}`}>
+                        <SelectTrigger className="w-[140px] ml-auto h-9 text-sm bg-background shadow-sm" data-testid={`select-status-${app.id}`}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           {APPLICATION_STATUSES.map(status => (
-                            <SelectItem key={status} value={status} className="text-xs">
+                            <SelectItem key={status} value={status} className="text-sm">
                               {status.charAt(0).toUpperCase() + status.slice(1)}
                             </SelectItem>
                           ))}
@@ -301,7 +443,7 @@ function ApplicationsManager() {
             </Table>
           </div>
         ) : (
-          <EmptyState title="No applications yet" description="There are no applications for this job posting." />
+          <div className="p-12"><EmptyState title="No applications yet" description="There are no applications for this job posting." /></div>
         )}
       </CardContent>
     </Card>
@@ -310,29 +452,21 @@ function ApplicationsManager() {
 
 function SkeletonTable() {
   return (
-    <Card>
-      <CardHeader>
-        <Skeleton className="h-8 w-48 mb-2" />
-        <Skeleton className="h-4 w-64" />
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-4">
+      <Skeleton className="h-12 w-full rounded-lg" />
+      <Skeleton className="h-16 w-full rounded-lg" />
+      <Skeleton className="h-16 w-full rounded-lg" />
+      <Skeleton className="h-16 w-full rounded-lg" />
+    </div>
   );
 }
 
 function EmptyState({ title, description }: { title: string, description: string }) {
   return (
-    <div className="text-center py-16 bg-muted/20 rounded-xl border border-dashed flex flex-col items-center">
-      <Search className="w-12 h-12 text-muted-foreground/50 mb-4" />
-      <h3 className="text-lg font-medium text-foreground mb-1">{title}</h3>
-      <p className="text-muted-foreground">{description}</p>
+    <div className="text-center py-12 bg-muted/20 rounded-2xl border border-dashed border-border/60 flex flex-col items-center">
+      <Search className="w-12 h-12 text-muted-foreground/30 mb-4" />
+      <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
+      <p className="text-muted-foreground max-w-sm">{description}</p>
     </div>
   );
 }

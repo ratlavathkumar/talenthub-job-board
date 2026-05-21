@@ -23,11 +23,15 @@ import type {
   Application,
   ApplicationInput,
   ApplicationStatusUpdate,
+  ApplicationWithJob,
   CategoryStat,
+  DailyStat,
   HealthStatus,
+  IncrementJobView200,
   Job,
   JobInput,
   JobUpdate,
+  ListApplicationsParams,
   ListJobsParams,
   StatsSummary
 } from './api.schemas';
@@ -495,6 +499,76 @@ export const useDeleteJob = <TError = ErrorType<unknown>,
       return useMutation(getDeleteJobMutationOptions(options));
     }
 
+export const getIncrementJobViewUrl = (id: number,) => {
+
+
+
+
+  return `/api/jobs/${id}/view`
+}
+
+/**
+ * @summary Increment view count for a job
+ */
+export const incrementJobView = async (id: number, options?: RequestInit): Promise<IncrementJobView200> => {
+
+  return customFetch<IncrementJobView200>(getIncrementJobViewUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getIncrementJobViewMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof incrementJobView>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof incrementJobView>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['incrementJobView'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof incrementJobView>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  incrementJobView(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type IncrementJobViewMutationResult = NonNullable<Awaited<ReturnType<typeof incrementJobView>>>
+
+    export type IncrementJobViewMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Increment view count for a job
+ */
+export const useIncrementJobView = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof incrementJobView>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof incrementJobView>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getIncrementJobViewMutationOptions(options));
+    }
+
 export const getListJobApplicationsUrl = (id: number,) => {
 
 
@@ -643,6 +717,90 @@ export const useApplyToJob = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getApplyToJobMutationOptions(options));
     }
+
+export const getListApplicationsUrl = (params?: ListApplicationsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/applications?${stringifiedParams}` : `/api/applications`
+}
+
+/**
+ * @summary List applications, optionally filtered by applicant email
+ */
+export const listApplications = async (params?: ListApplicationsParams, options?: RequestInit): Promise<ApplicationWithJob[]> => {
+
+  return customFetch<ApplicationWithJob[]>(getListApplicationsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListApplicationsQueryKey = (params?: ListApplicationsParams,) => {
+    return [
+    `/api/applications`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListApplicationsQueryOptions = <TData = Awaited<ReturnType<typeof listApplications>>, TError = ErrorType<unknown>>(params?: ListApplicationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListApplicationsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listApplications>>> = ({ signal }) => listApplications(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listApplications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListApplicationsQueryResult = NonNullable<Awaited<ReturnType<typeof listApplications>>>
+export type ListApplicationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List applications, optionally filtered by applicant email
+ */
+
+export function useListApplications<TData = Awaited<ReturnType<typeof listApplications>>, TError = ErrorType<unknown>>(
+ params?: ListApplicationsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listApplications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListApplicationsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getUpdateApplicationStatusUrl = (id: number,) => {
 
@@ -935,6 +1093,83 @@ export function useGetRecentJobs<TData = Awaited<ReturnType<typeof getRecentJobs
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetRecentJobsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetApplicationsOverTimeUrl = () => {
+
+
+
+
+  return `/api/stats/applications-over-time`
+}
+
+/**
+ * @summary Application counts per day for last 30 days
+ */
+export const getApplicationsOverTime = async ( options?: RequestInit): Promise<DailyStat[]> => {
+
+  return customFetch<DailyStat[]>(getGetApplicationsOverTimeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetApplicationsOverTimeQueryKey = () => {
+    return [
+    `/api/stats/applications-over-time`
+    ] as const;
+    }
+
+
+export const getGetApplicationsOverTimeQueryOptions = <TData = Awaited<ReturnType<typeof getApplicationsOverTime>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getApplicationsOverTime>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetApplicationsOverTimeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getApplicationsOverTime>>> = ({ signal }) => getApplicationsOverTime({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getApplicationsOverTime>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetApplicationsOverTimeQueryResult = NonNullable<Awaited<ReturnType<typeof getApplicationsOverTime>>>
+export type GetApplicationsOverTimeQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Application counts per day for last 30 days
+ */
+
+export function useGetApplicationsOverTime<TData = Awaited<ReturnType<typeof getApplicationsOverTime>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getApplicationsOverTime>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetApplicationsOverTimeQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

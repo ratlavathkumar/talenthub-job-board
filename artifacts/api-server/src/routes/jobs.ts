@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, gte, lte, ilike, or, sql, desc } from "drizzle-orm";
+import { and, eq, gte, lte, ilike, or, sql, desc, asc } from "drizzle-orm";
 import { db, jobsTable, applicationsTable } from "@workspace/db";
 import {
   ListJobsQueryParams,
@@ -11,11 +11,31 @@ import {
   ListJobApplicationsParams,
   ApplyToJobParams,
   ApplyToJobBody,
-  UpdateApplicationStatusParams,
-  UpdateApplicationStatusBody,
+  IncrementJobViewParams,
 } from "@workspace/api-zod";
 
 const router: IRouter = Router();
+
+const jobWithCount = {
+  id: jobsTable.id,
+  title: jobsTable.title,
+  company: jobsTable.company,
+  companyLogo: jobsTable.companyLogo,
+  location: jobsTable.location,
+  remote: jobsTable.remote,
+  jobType: jobsTable.jobType,
+  category: jobsTable.category,
+  description: jobsTable.description,
+  requirements: jobsTable.requirements,
+  salaryMin: jobsTable.salaryMin,
+  salaryMax: jobsTable.salaryMax,
+  currency: jobsTable.currency,
+  featured: jobsTable.featured,
+  viewCount: jobsTable.viewCount,
+  createdAt: jobsTable.createdAt,
+  expiresAt: jobsTable.expiresAt,
+  applicationCount: sql<number>`cast(count(${applicationsTable.id}) as int)`,
+};
 
 router.get("/jobs", async (req, res): Promise<void> => {
   const parsed = ListJobsQueryParams.safeParse(req.query);
@@ -24,7 +44,7 @@ router.get("/jobs", async (req, res): Promise<void> => {
     return;
   }
 
-  const { search, location, jobType, category, salaryMin, salaryMax, featured } = parsed.data;
+  const { search, location, jobType, category, salaryMin, salaryMax, featured, sortBy } = parsed.data;
 
   const conditions = [];
 
@@ -56,31 +76,31 @@ router.get("/jobs", async (req, res): Promise<void> => {
     conditions.push(eq(jobsTable.featured, featured));
   }
 
+  let orderBy;
+  switch (sortBy) {
+    case "oldest":
+      orderBy = [asc(jobsTable.createdAt)];
+      break;
+    case "salary-high":
+      orderBy = [desc(jobsTable.salaryMax)];
+      break;
+    case "salary-low":
+      orderBy = [asc(jobsTable.salaryMin)];
+      break;
+    case "most-applied":
+      orderBy = [desc(sql`count(${applicationsTable.id})`), desc(jobsTable.createdAt)];
+      break;
+    default:
+      orderBy = [desc(jobsTable.featured), desc(jobsTable.createdAt)];
+  }
+
   const jobs = await db
-    .select({
-      id: jobsTable.id,
-      title: jobsTable.title,
-      company: jobsTable.company,
-      companyLogo: jobsTable.companyLogo,
-      location: jobsTable.location,
-      remote: jobsTable.remote,
-      jobType: jobsTable.jobType,
-      category: jobsTable.category,
-      description: jobsTable.description,
-      requirements: jobsTable.requirements,
-      salaryMin: jobsTable.salaryMin,
-      salaryMax: jobsTable.salaryMax,
-      currency: jobsTable.currency,
-      featured: jobsTable.featured,
-      createdAt: jobsTable.createdAt,
-      expiresAt: jobsTable.expiresAt,
-      applicationCount: sql<number>`cast(count(${applicationsTable.id}) as int)`,
-    })
+    .select(jobWithCount)
     .from(jobsTable)
     .leftJoin(applicationsTable, eq(applicationsTable.jobId, jobsTable.id))
     .where(conditions.length > 0 ? and(...conditions) : undefined)
     .groupBy(jobsTable.id)
-    .orderBy(desc(jobsTable.featured), desc(jobsTable.createdAt));
+    .orderBy(...orderBy);
 
   res.json(jobs);
 });
@@ -105,25 +125,7 @@ router.get("/jobs/:id", async (req, res): Promise<void> => {
   }
 
   const [job] = await db
-    .select({
-      id: jobsTable.id,
-      title: jobsTable.title,
-      company: jobsTable.company,
-      companyLogo: jobsTable.companyLogo,
-      location: jobsTable.location,
-      remote: jobsTable.remote,
-      jobType: jobsTable.jobType,
-      category: jobsTable.category,
-      description: jobsTable.description,
-      requirements: jobsTable.requirements,
-      salaryMin: jobsTable.salaryMin,
-      salaryMax: jobsTable.salaryMax,
-      currency: jobsTable.currency,
-      featured: jobsTable.featured,
-      createdAt: jobsTable.createdAt,
-      expiresAt: jobsTable.expiresAt,
-      applicationCount: sql<number>`cast(count(${applicationsTable.id}) as int)`,
-    })
+    .select(jobWithCount)
     .from(jobsTable)
     .leftJoin(applicationsTable, eq(applicationsTable.jobId, jobsTable.id))
     .where(eq(jobsTable.id, params.data.id))
@@ -182,6 +184,27 @@ router.delete("/jobs/:id", async (req, res): Promise<void> => {
   }
 
   res.sendStatus(204);
+});
+
+router.post("/jobs/:id/view", async (req, res): Promise<void> => {
+  const params = IncrementJobViewParams.safeParse(req.params);
+  if (!params.success) {
+    res.status(400).json({ error: params.error.message });
+    return;
+  }
+
+  const [job] = await db
+    .update(jobsTable)
+    .set({ viewCount: sql`${jobsTable.viewCount} + 1` })
+    .where(eq(jobsTable.id, params.data.id))
+    .returning({ viewCount: jobsTable.viewCount });
+
+  if (!job) {
+    res.status(404).json({ error: "Job not found" });
+    return;
+  }
+
+  res.json({ viewCount: job.viewCount });
 });
 
 router.get("/jobs/:id/applications", async (req, res): Promise<void> => {
