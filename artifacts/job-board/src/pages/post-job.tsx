@@ -1,6 +1,7 @@
 import { useCreateJob } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
 import { Layout } from "../components/layout";
+import { AdminGate } from "../components/admin-gate";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
@@ -36,7 +37,7 @@ const jobSchema = z.object({
 
 type JobFormValues = z.infer<typeof jobSchema>;
 
-export default function PostJob() {
+function PostJobForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const createMutation = useCreateJob();
@@ -359,5 +360,13 @@ export default function PostJob() {
         </Card>
       </div>
     </Layout>
+  );
+}
+
+export default function PostJob() {
+  return (
+    <AdminGate>
+      <PostJobForm />
+    </AdminGate>
   );
 }

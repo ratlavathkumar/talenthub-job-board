@@ -4,8 +4,9 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createContext, useContext } from "react";
 import { useTheme, type Theme } from "@/hooks/use-theme";
+import { useAdminAuth } from "@/hooks/use-admin-auth";
+import { CustomCursor } from "@/components/cursor";
 import NotFound from "@/pages/not-found";
-
 import Home from "@/pages/home";
 import Jobs from "@/pages/jobs";
 import JobDetail from "@/pages/job-detail";
@@ -18,14 +19,29 @@ export const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>(
   theme: "light",
   toggle: () => {},
 });
-
 export const useThemeContext = () => useContext(ThemeContext);
+
+export const AdminContext = createContext<{
+  isAdmin: boolean;
+  login: (password: string) => boolean;
+  logout: () => void;
+}>({
+  isAdmin: false,
+  login: () => false,
+  logout: () => {},
+});
+export const useAdminContext = () => useContext(AdminContext);
 
 const queryClient = new QueryClient();
 
 function ThemeProvider({ children }: { children: React.ReactNode }) {
   const { theme, toggle } = useTheme();
   return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;
+}
+
+function AdminProvider({ children }: { children: React.ReactNode }) {
+  const { isAdmin, login, logout } = useAdminAuth();
+  return <AdminContext.Provider value={{ isAdmin, login, logout }}>{children}</AdminContext.Provider>;
 }
 
 function Router() {
@@ -48,10 +64,13 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ThemeProvider>
-          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
-          </WouterRouter>
-          <Toaster />
+          <AdminProvider>
+            <CustomCursor />
+            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </AdminProvider>
         </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
