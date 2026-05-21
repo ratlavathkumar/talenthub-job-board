@@ -1,22 +1,26 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Job Board API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: jobs
+    description: Job listing operations
+  - name: applications
+    description: Job application operations
+  - name: stats
+    description: Dashboard statistics
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +28,237 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /jobs:
+    get:
+      operationId: listJobs
+      tags: [jobs]
+      summary: List all job postings with optional filters
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: jobType
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: salaryMin
+          in: query
+          schema:
+            type: integer
+        - name: salaryMax
+          in: query
+          schema:
+            type: integer
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Job"
+    post:
+      operationId: createJob
+      tags: [jobs]
+      summary: Post a new job listing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      summary: Get a single job posting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateJob
+      tags: [jobs]
+      summary: Update a job posting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+    delete:
+      operationId: deleteJob
+      tags: [jobs]
+      summary: Delete a job posting
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /jobs/{id}/applications:
+    get:
+      operationId: listJobApplications
+      tags: [applications]
+      summary: List applications for a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Application"
+    post:
+      operationId: applyToJob
+      tags: [applications]
+      summary: Submit an application for a job
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationInput"
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+
+  /applications/{id}/status:
+    patch:
+      operationId: updateApplicationStatus
+      tags: [applications]
+      summary: Update the status of an application
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplicationStatusUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Application"
+
+  /stats/summary:
+    get:
+      operationId: getStatsSummary
+      tags: [stats]
+      summary: Get high-level job board stats
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsSummary"
+
+  /stats/by-category:
+    get:
+      operationId: getStatsByCategory
+      tags: [stats]
+      summary: Job counts grouped by category
+      responses:
+        "200":
+          description: Stats by category
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryStat"
+
+  /stats/recent-jobs:
+    get:
+      operationId: getRecentJobs
+      tags: [stats]
+      summary: Most recently posted jobs
+      responses:
+        "200":
+          description: Recent jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Job"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +269,219 @@ components:
       required:
         - status
 
+    Job:
+      type: object
+      required:
+        - id
+        - title
+        - company
+        - location
+        - jobType
+        - category
+        - description
+        - salaryMin
+        - salaryMax
+        - featured
+        - createdAt
+        - applicationCount
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        company:
+          type: string
+        companyLogo:
+          type: ["string", "null"]
+        location:
+          type: string
+        remote:
+          type: boolean
+        jobType:
+          type: string
+          description: full-time, part-time, contract, internship
+        category:
+          type: string
+          description: Engineering, Design, Marketing, Finance, etc.
+        description:
+          type: string
+        requirements:
+          type: ["string", "null"]
+        salaryMin:
+          type: integer
+        salaryMax:
+          type: integer
+        currency:
+          type: string
+        featured:
+          type: boolean
+        applicationCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: ["string", "null"]
+          format: date-time
+
+    JobInput:
+      type: object
+      required:
+        - title
+        - company
+        - location
+        - jobType
+        - category
+        - description
+        - salaryMin
+        - salaryMax
+      properties:
+        title:
+          type: string
+          minLength: 1
+        company:
+          type: string
+          minLength: 1
+        companyLogo:
+          type: string
+        location:
+          type: string
+          minLength: 1
+        remote:
+          type: boolean
+        jobType:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+          minLength: 1
+        requirements:
+          type: string
+        salaryMin:
+          type: integer
+        salaryMax:
+          type: integer
+        currency:
+          type: string
+        featured:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+
+    JobUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        company:
+          type: string
+        companyLogo:
+          type: string
+        location:
+          type: string
+        remote:
+          type: boolean
+        jobType:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        requirements:
+          type: string
+        salaryMin:
+          type: integer
+        salaryMax:
+          type: integer
+        currency:
+          type: string
+        featured:
+          type: boolean
+        expiresAt:
+          type: string
+          format: date-time
+
+    Application:
+      type: object
+      required:
+        - id
+        - jobId
+        - applicantName
+        - applicantEmail
+        - status
+        - createdAt
+      properties:
+        id:
+          type: integer
+        jobId:
+          type: integer
+        applicantName:
+          type: string
+        applicantEmail:
+          type: string
+        coverLetter:
+          type: ["string", "null"]
+        resumeUrl:
+          type: ["string", "null"]
+        status:
+          type: string
+          description: pending, reviewed, shortlisted, rejected
+        createdAt:
+          type: string
+          format: date-time
+
+    ApplicationInput:
+      type: object
+      required:
+        - applicantName
+        - applicantEmail
+      properties:
+        applicantName:
+          type: string
+          minLength: 1
+        applicantEmail:
+          type: string
+          format: email
+        coverLetter:
+          type: string
+        resumeUrl:
+          type: string
+
+    ApplicationStatusUpdate:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          description: pending, reviewed, shortlisted, rejected
+
+    StatsSummary:
+      type: object
+      required:
+        - totalJobs
+        - totalApplications
+        - featuredJobs
+        - newJobsThisWeek
+      properties:
+        totalJobs:
+          type: integer
+        totalApplications:
+          type: integer
+        featuredJobs:
+          type: integer
+        newJobsThisWeek:
+          type: integer
+
+    CategoryStat:
+      type: object
+      required:
+        - category
+        - count
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
