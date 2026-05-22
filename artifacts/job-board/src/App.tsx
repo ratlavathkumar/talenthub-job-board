@@ -6,7 +6,6 @@ import { useTheme } from "@/hooks/use-theme";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { useUserAuth } from "@/hooks/use-user-auth";
 import { useCompanyAuth } from "@/hooks/use-company-auth";
-import { CustomCursor } from "@/components/cursor";
 import {
   ThemeContext, AdminContext, UserAuthContext, CompanyAuthContext,
 } from "@/contexts";
@@ -76,7 +75,6 @@ function App() {
           <AdminProvider>
             <UserAuthProvider>
               <CompanyAuthProvider>
-                <CustomCursor />
                 <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
                   <Router />
                 </WouterRouter>
