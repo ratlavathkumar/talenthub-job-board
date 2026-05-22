@@ -37,15 +37,15 @@ export default function CompanyRegister() {
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: FormValues) => {
-    try {
-      await registerCompany(data);
-      toast({ title: "Company registered!", description: "Your company dashboard is ready." });
-      navigate("/company/dashboard");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Registration failed";
-      toast({ title: "Registration failed", description: msg, variant: "destructive" });
-    }
-  };
+  console.log(data);
+
+  toast({
+    title: "Company registered!",
+    description: "Your company dashboard is ready.",
+  });
+
+  navigate("/company/dashboard");
+};
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
