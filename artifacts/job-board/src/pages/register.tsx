@@ -29,9 +29,16 @@ export default function Register() {
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
  const onSubmit = async (data: FormValues) => {
-  console.log(data);
+  const candidates = JSON.parse(
+    localStorage.getItem("candidates") || "[]"
+  );
 
-  localStorage.setItem("candidate", JSON.stringify(data));
+  candidates.push(data);
+
+  localStorage.setItem(
+    "candidates",
+    JSON.stringify(candidates)
+  );
 
   toast({
     title: "Account created!",
