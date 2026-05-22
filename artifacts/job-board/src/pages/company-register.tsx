@@ -37,14 +37,22 @@ export default function CompanyRegister() {
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: FormValues) => {
-  console.log(data);
+  const companies = JSON.parse(
+    localStorage.getItem("companies") || "[]"
+  );
+
+  companies.push(data);
+
+  localStorage.setItem(
+    "companies",
+    JSON.stringify(companies)
+  );
 
   toast({
     title: "Company registered!",
-    description: "Your company dashboard is ready.",
   });
 
-  navigate("/company/dashboard");
+  navigate("/company/login");
 };
 
   return (
