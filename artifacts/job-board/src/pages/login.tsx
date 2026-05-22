@@ -25,13 +25,34 @@ export default function Login() {
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
- const onSubmit = async () => {
-  toast({
-    title: "Welcome back!",
-    description: "You're now signed in.",
-  });
+ const onSubmit = async (data: FormValues) => {
+  const candidates = JSON.parse(
+    localStorage.getItem("candidates") || "[]"
+  );
 
-  navigate("/jobs");
+  const found = candidates.find(
+    (c: any) =>
+      c.email === data.email &&
+      c.password === data.password
+  );
+
+  if (found) {
+    localStorage.setItem(
+      "candidateLoggedIn",
+      JSON.stringify(found)
+    );
+
+    toast({
+      title: "Login successful",
+    });
+
+    navigate("/jobs");
+  } else {
+    toast({
+      title: "Invalid credentials",
+      variant: "destructive",
+    });
+  }
 };
 
   return (
