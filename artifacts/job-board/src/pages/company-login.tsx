@@ -25,13 +25,34 @@ export default function CompanyLogin() {
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  const onSubmit = async () => {
-  toast({
-    title: "Company login successful",
-    description: "Welcome back!",
-  });
+ const onSubmit = async (data: FormValues) => {
+  const companies = JSON.parse(
+    localStorage.getItem("companies") || "[]"
+  );
 
-  navigate("/company/dashboard");
+  const found = companies.find(
+    (c: any) =>
+      c.email === data.email &&
+      c.password === data.password
+  );
+
+  if (found) {
+    localStorage.setItem(
+      "companyLoggedIn",
+      JSON.stringify(found)
+    );
+
+    toast({
+      title: "Company login successful",
+    });
+
+    navigate("/company/dashboard");
+  } else {
+    toast({
+      title: "Invalid credentials",
+      variant: "destructive",
+    });
+  }
 };
 
   return (
