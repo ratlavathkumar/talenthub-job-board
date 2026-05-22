@@ -4,7 +4,7 @@ import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Lock, Shield } from "lucide-react";
-import { useAdminContext } from "@/App";
+import { useAdminContext } from "@/contexts";
 
 export function AdminGate({ children }: { children: ReactNode }) {
   const { isAdmin, login } = useAdminContext();

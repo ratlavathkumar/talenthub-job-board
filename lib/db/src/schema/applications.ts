@@ -8,8 +8,10 @@ export const applicationsTable = pgTable("applications", {
   jobId: integer("job_id").notNull().references(() => jobsTable.id, { onDelete: "cascade" }),
   applicantName: text("applicant_name").notNull(),
   applicantEmail: text("applicant_email").notNull(),
+  phone: text("phone"),
   coverLetter: text("cover_letter"),
   resumeUrl: text("resume_url"),
+  profileImageUrl: text("profile_image_url"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

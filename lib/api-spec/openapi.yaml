@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Api
   version: 0.1.0
-  description: Job Board API
+  description: TalentHub API
 servers:
   - url: /api
     description: Base API path
@@ -15,6 +15,14 @@ tags:
     description: Job application operations
   - name: stats
     description: Dashboard statistics
+  - name: auth
+    description: Authentication
+  - name: companies
+    description: Company management
+  - name: users
+    description: User management
+  - name: storage
+    description: File storage
 paths:
   /healthz:
     get:
@@ -68,6 +76,10 @@ paths:
           schema:
             type: string
             description: newest, oldest, salary-high, salary-low, most-applied
+        - name: companyId
+          in: query
+          schema:
+            type: integer
       responses:
         "200":
           description: List of jobs
@@ -324,6 +336,264 @@ paths:
                 items:
                   $ref: "#/components/schemas/DailyStat"
 
+  /auth/user/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a new candidate account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserResponse"
+        "409":
+          description: Email already in use
+
+  /auth/user/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Login as a candidate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/user/logout:
+    post:
+      operationId: logoutUser
+      tags: [auth]
+      summary: Logout candidate
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /auth/user/me:
+    get:
+      operationId: getUserMe
+      tags: [auth]
+      summary: Get current candidate session
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserResponse"
+        "401":
+          description: Not authenticated
+    patch:
+      operationId: updateUserProfile
+      tags: [auth]
+      summary: Update candidate profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserProfileUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserResponse"
+
+  /auth/company/register:
+    post:
+      operationId: registerCompany
+      tags: [auth]
+      summary: Register a new company account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyRegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthCompanyResponse"
+        "409":
+          description: Email already in use
+
+  /auth/company/login:
+    post:
+      operationId: loginCompany
+      tags: [auth]
+      summary: Login as a company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthCompanyResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/company/logout:
+    post:
+      operationId: logoutCompany
+      tags: [auth]
+      summary: Logout company
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /auth/company/me:
+    get:
+      operationId: getCompanyMe
+      tags: [auth]
+      summary: Get current company session
+      responses:
+        "200":
+          description: Current company
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthCompanyResponse"
+        "401":
+          description: Not authenticated
+    patch:
+      operationId: updateCompanyProfile
+      tags: [auth]
+      summary: Update company profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyProfileUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthCompanyResponse"
+
+  /admin/companies:
+    get:
+      operationId: adminListCompanies
+      tags: [companies]
+      summary: Admin - list all companies
+      responses:
+        "200":
+          description: Companies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CompanyPublic"
+
+  /admin/companies/{id}:
+    patch:
+      operationId: adminUpdateCompany
+      tags: [companies]
+      summary: Admin - approve or update a company
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminCompanyUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyPublic"
+    delete:
+      operationId: adminDeleteCompany
+      tags: [companies]
+      summary: Admin - delete a company
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [users]
+      summary: Admin - list all users
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserPublic"
+
+  /admin/users/{id}:
+    delete:
+      operationId: adminDeleteUser
+      tags: [users]
+      summary: Admin - delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+
 components:
   schemas:
     HealthStatus:
@@ -359,6 +629,8 @@ components:
           type: string
         companyLogo:
           type: ["string", "null"]
+        companyId:
+          type: ["integer", "null"]
         location:
           type: string
         remote:
@@ -412,6 +684,8 @@ components:
           minLength: 1
         companyLogo:
           type: string
+        companyId:
+          type: integer
         location:
           type: string
           minLength: 1
@@ -447,6 +721,8 @@ components:
           type: string
         companyLogo:
           type: string
+        companyId:
+          type: integer
         location:
           type: string
         remote:
@@ -489,9 +765,13 @@ components:
           type: string
         applicantEmail:
           type: string
+        phone:
+          type: ["string", "null"]
         coverLetter:
           type: ["string", "null"]
         resumeUrl:
+          type: ["string", "null"]
+        profileImageUrl:
           type: ["string", "null"]
         status:
           type: string
@@ -522,9 +802,13 @@ components:
           type: string
         applicantEmail:
           type: string
+        phone:
+          type: ["string", "null"]
         coverLetter:
           type: ["string", "null"]
         resumeUrl:
+          type: ["string", "null"]
+        profileImageUrl:
           type: ["string", "null"]
         status:
           type: string
@@ -554,9 +838,13 @@ components:
         applicantEmail:
           type: string
           format: email
+        phone:
+          type: string
         coverLetter:
           type: string
         resumeUrl:
+          type: string
+        profileImageUrl:
           type: string
 
     ApplicationStatusUpdate:
@@ -606,3 +894,231 @@ components:
           type: string
         count:
           type: integer
+
+    LoginInput:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+
+    UserRegisterInput:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        phone:
+          type: string
+        location:
+          type: string
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        bio:
+          type: string
+        location:
+          type: string
+        profileImageUrl:
+          type: string
+        resumeUrl:
+          type: string
+
+    AuthUserResponse:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - createdAt
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        bio:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+        resumeUrl:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    UserPublic:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - createdAt
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    CompanyRegisterInput:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        website:
+          type: string
+        industry:
+          type: string
+        description:
+          type: string
+        size:
+          type: string
+        location:
+          type: string
+
+    CompanyProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        website:
+          type: string
+        industry:
+          type: string
+        description:
+          type: string
+        size:
+          type: string
+        location:
+          type: string
+        logoUrl:
+          type: string
+
+    AuthCompanyResponse:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - approved
+        - createdAt
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        size:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        approved:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    CompanyPublic:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - approved
+        - createdAt
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        size:
+          type: ["string", "null"]
+        location:
+          type: ["string", "null"]
+        approved:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    AdminCompanyUpdate:
+      type: object
+      properties:
+        approved:
+          type: boolean
+        name:
+          type: string
+
+    OkResponse:
+      type: object
+      required:
+        - ok
+      properties:
+        ok:
+          type: boolean
+

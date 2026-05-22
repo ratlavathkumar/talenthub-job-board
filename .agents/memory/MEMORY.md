@@ -1,0 +1,2 @@
+- [Auth architecture](auth-architecture.md) — hand-written auth routes (not in OpenAPI spec) to avoid Orval type conflicts; contexts in contexts.tsx to break circular imports
+- [API server zod bundling](api-server-zod-bundling.md) — zod must be in runtime `dependencies`, not devDependencies, or esbuild can't resolve it

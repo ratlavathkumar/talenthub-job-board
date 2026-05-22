@@ -18,14 +18,15 @@ import { Button } from "../components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Badge } from "../components/ui/badge";
+import { Switch } from "../components/ui/switch";
 import { Skeleton } from "../components/ui/skeleton";
 import { useToast } from "../hooks/use-toast";
 import { APPLICATION_STATUSES, STATUS_COLORS } from "../lib/constants";
 import { Trash2, ExternalLink, FileText, Search, Briefcase, TrendingUp, Users, Star, PieChart as PieChartIcon, Activity, LogOut, ShieldCheck, PlusCircle } from "lucide-react";
 import { Link } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { useAdminContext } from "@/App";
+import { useAdminContext } from "@/contexts";
 
 export default function Admin() {
   return (
@@ -64,17 +65,24 @@ function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="jobs" className="space-y-8">
-          <TabsList className="grid w-full sm:w-[700px] grid-cols-4 h-12 p-1 bg-muted/50 rounded-xl">
-            <TabsTrigger value="jobs" className="text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm" data-testid="tab-admin-jobs">
+          <TabsList className="flex flex-wrap gap-1 h-auto p-1 bg-muted/50 rounded-xl w-full sm:w-auto">
+            <TabsTrigger value="jobs" className="text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2" data-testid="tab-admin-jobs">
               Job Listings
             </TabsTrigger>
-            <TabsTrigger value="applications" className="text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm" data-testid="tab-admin-applications">
+            <TabsTrigger value="applications" className="text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2" data-testid="tab-admin-applications">
               Applications
             </TabsTrigger>
-            <TabsTrigger value="analytics" className="text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm" data-testid="tab-admin-analytics">
+            <TabsTrigger value="analytics" className="text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2" data-testid="tab-admin-analytics">
               Analytics
             </TabsTrigger>
-            <TabsTrigger value="post" className="text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm gap-1.5" data-testid="tab-admin-post">
+            <TabsTrigger value="users" className="text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 gap-1.5">
+              <Search className="w-3.5 h-3.5" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger value="companies" className="text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 gap-1.5">
+              Companies
+            </TabsTrigger>
+            <TabsTrigger value="post" className="text-sm rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm px-4 py-2 gap-1.5" data-testid="tab-admin-post">
               <PlusCircle className="w-3.5 h-3.5" />
               Post a Job
             </TabsTrigger>
@@ -90,6 +98,14 @@ function AdminDashboard() {
 
           <TabsContent value="analytics" className="mt-6">
             <AnalyticsDashboard />
+          </TabsContent>
+
+          <TabsContent value="users" className="mt-6">
+            <UsersManager />
+          </TabsContent>
+
+          <TabsContent value="companies" className="mt-6">
+            <CompaniesManager />
           </TabsContent>
 
           <TabsContent value="post" className="mt-6">
@@ -580,6 +596,181 @@ function SkeletonTable() {
       <Skeleton className="h-16 w-full rounded-lg" />
       <Skeleton className="h-16 w-full rounded-lg" />
     </div>
+  );
+}
+
+function UsersManager() {
+  const [users, setUsers] = useState<Array<{
+    id: number; name: string; email: string; phone: string | null;
+    location: string | null; createdAt: string;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${BASE}/api/admin/users`, { credentials: "include" });
+      if (r.ok) setUsers(await r.json());
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchUsers(); }, []);
+
+  const deleteUser = async (id: number) => {
+    try {
+      await fetch(`${BASE}/api/admin/users/${id}`, { method: "DELETE", credentials: "include" });
+      setUsers(u => u.filter(x => x.id !== id));
+      toast({ title: "User deleted" });
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
+  };
+
+  if (loading) return <SkeletonTable />;
+
+  return (
+    <Card className="border-border/50 shadow-sm overflow-hidden">
+      <CardHeader className="bg-gradient-to-r from-primary/5 to-blue-500/5 border-b border-border/40">
+        <CardTitle className="text-xl">Users ({users.length})</CardTitle>
+        <CardDescription>All registered candidates on TalentHub.</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        {users.length === 0 ? (
+          <div className="p-8"><EmptyState title="No users yet" description="No candidates have registered." /></div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map(u => (
+                <TableRow key={u.id}>
+                  <TableCell className="font-medium">{u.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                  <TableCell className="text-muted-foreground">{u.phone ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{u.location ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{new Date(u.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteUser(u.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CompaniesManager() {
+  const [companies, setCompanies] = useState<Array<{
+    id: number; name: string; email: string; industry: string | null;
+    size: string | null; approved: boolean; createdAt: string;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  const fetchCompanies = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch(`${BASE}/api/admin/companies`, { credentials: "include" });
+      if (r.ok) setCompanies(await r.json());
+    } finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchCompanies(); }, []);
+
+  const toggleApproval = async (id: number, approved: boolean) => {
+    try {
+      const r = await fetch(`${BASE}/api/admin/companies/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ approved }),
+      });
+      const updated = await r.json();
+      setCompanies(cs => cs.map(c => c.id === id ? { ...c, approved: updated.approved } : c));
+      toast({ title: approved ? "Company approved" : "Company suspended" });
+    } catch {
+      toast({ title: "Update failed", variant: "destructive" });
+    }
+  };
+
+  const deleteCompany = async (id: number) => {
+    try {
+      await fetch(`${BASE}/api/admin/companies/${id}`, { method: "DELETE", credentials: "include" });
+      setCompanies(cs => cs.filter(c => c.id !== id));
+      toast({ title: "Company deleted" });
+    } catch {
+      toast({ title: "Delete failed", variant: "destructive" });
+    }
+  };
+
+  if (loading) return <SkeletonTable />;
+
+  return (
+    <Card className="border-border/50 shadow-sm overflow-hidden">
+      <CardHeader className="bg-gradient-to-r from-violet-500/5 to-primary/5 border-b border-border/40">
+        <CardTitle className="text-xl">Companies ({companies.length})</CardTitle>
+        <CardDescription>All registered companies. Toggle approval to control job posting access.</CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        {companies.length === 0 ? (
+          <div className="p-8"><EmptyState title="No companies yet" description="No companies have registered." /></div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Company</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Industry</TableHead>
+                <TableHead>Size</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Joined</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {companies.map(c => (
+                <TableRow key={c.id}>
+                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{c.email}</TableCell>
+                  <TableCell className="text-muted-foreground">{c.industry ?? "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{c.size ?? "—"}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={c.approved} onCheckedChange={(v) => toggleApproval(c.id, v)} />
+                      <Badge className={c.approved ? "bg-emerald-100 text-emerald-700 border-emerald-200" : "bg-yellow-100 text-yellow-700 border-yellow-200"}>
+                        {c.approved ? "Approved" : "Pending"}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-xs">{new Date(c.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => deleteCompany(c.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

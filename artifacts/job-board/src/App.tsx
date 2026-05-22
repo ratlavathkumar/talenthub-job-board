@@ -2,10 +2,14 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { createContext, useContext } from "react";
-import { useTheme, type Theme } from "@/hooks/use-theme";
+import { useTheme } from "@/hooks/use-theme";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
+import { useUserAuth } from "@/hooks/use-user-auth";
+import { useCompanyAuth } from "@/hooks/use-company-auth";
 import { CustomCursor } from "@/components/cursor";
+import {
+  ThemeContext, AdminContext, UserAuthContext, CompanyAuthContext,
+} from "@/contexts";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Jobs from "@/pages/jobs";
@@ -14,23 +18,12 @@ import PostJob from "@/pages/post-job";
 import Admin from "@/pages/admin";
 import Track from "@/pages/track";
 import Saved from "@/pages/saved";
-
-export const ThemeContext = createContext<{ theme: Theme; toggle: () => void }>({
-  theme: "light",
-  toggle: () => {},
-});
-export const useThemeContext = () => useContext(ThemeContext);
-
-export const AdminContext = createContext<{
-  isAdmin: boolean;
-  login: (password: string) => boolean;
-  logout: () => void;
-}>({
-  isAdmin: false,
-  login: () => false,
-  logout: () => {},
-});
-export const useAdminContext = () => useContext(AdminContext);
+import Login from "@/pages/login";
+import Register from "@/pages/register";
+import CompanyLogin from "@/pages/company-login";
+import CompanyRegister from "@/pages/company-register";
+import CompanyDashboard from "@/pages/company-dashboard";
+import Profile from "@/pages/profile";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +37,16 @@ function AdminProvider({ children }: { children: React.ReactNode }) {
   return <AdminContext.Provider value={{ isAdmin, login, logout }}>{children}</AdminContext.Provider>;
 }
 
+function UserAuthProvider({ children }: { children: React.ReactNode }) {
+  const auth = useUserAuth();
+  return <UserAuthContext.Provider value={auth}>{children}</UserAuthContext.Provider>;
+}
+
+function CompanyAuthProvider({ children }: { children: React.ReactNode }) {
+  const auth = useCompanyAuth();
+  return <CompanyAuthContext.Provider value={auth}>{children}</CompanyAuthContext.Provider>;
+}
+
 function Router() {
   return (
     <Switch>
@@ -54,6 +57,12 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/track" component={Track} />
       <Route path="/saved" component={Saved} />
+      <Route path="/login" component={Login} />
+      <Route path="/register" component={Register} />
+      <Route path="/company/login" component={CompanyLogin} />
+      <Route path="/company/register" component={CompanyRegister} />
+      <Route path="/company/dashboard" component={CompanyDashboard} />
+      <Route path="/profile" component={Profile} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -65,11 +74,15 @@ function App() {
       <TooltipProvider>
         <ThemeProvider>
           <AdminProvider>
-            <CustomCursor />
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <Router />
-            </WouterRouter>
-            <Toaster />
+            <UserAuthProvider>
+              <CompanyAuthProvider>
+                <CustomCursor />
+                <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                  <Router />
+                </WouterRouter>
+                <Toaster />
+              </CompanyAuthProvider>
+            </UserAuthProvider>
           </AdminProvider>
         </ThemeProvider>
       </TooltipProvider>

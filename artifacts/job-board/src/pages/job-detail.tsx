@@ -8,20 +8,23 @@ import { Badge } from "../components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
+import { Label } from "../components/ui/label";
 import { useToast } from "../hooks/use-toast";
 import { formatCurrency, JOB_TYPE_LABELS, timeAgo } from "../lib/constants";
 import { JobCard } from "../components/job-card";
-import { Building2, MapPin, DollarSign, Clock, Globe, Calendar, ArrowLeft, Send, Users, Eye, Link as LinkIcon, Briefcase } from "lucide-react";
+import { Building2, MapPin, DollarSign, Clock, Globe, Calendar, ArrowLeft, Send, Users, Eye, Link as LinkIcon, Briefcase, Upload, FileText, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useEffect } from "react";
+import { useFileUpload } from "../hooks/use-file-upload";
+import { useUserAuthContext } from "@/contexts";
 
 const applicationSchema = z.object({
   applicantName: z.string().min(2, "Name is required"),
   applicantEmail: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
   coverLetter: z.string().optional(),
-  resumeUrl: z.string().url("Must be a valid URL").optional().or(z.literal('')),
 });
 
 type ApplicationFormValues = z.infer<typeof applicationSchema>;
@@ -30,6 +33,12 @@ export default function JobDetail() {
   const { id } = useParams<{ id: string }>();
   const jobId = parseInt(id || "0", 10);
   const { toast } = useToast();
+  const { user } = useUserAuthContext();
+  const { uploadFile, isUploading, progress } = useFileUpload();
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [uploadedResumeUrl, setUploadedResumeUrl] = useState<string | null>(
+    user?.resumeUrl ?? null
+  );
   
   const { data: job, isLoading, error } = useGetJob(jobId, { 
     query: { 
@@ -40,7 +49,7 @@ export default function JobDetail() {
 
   const { data: similarJobsData } = useListJobs(
     { category: job?.category },
-    { query: { enabled: !!job?.category } }
+    { query: { enabled: !!job?.category, queryKey: ["/api/jobs", "similar", job?.category] } }
   );
 
   const incrementView = useIncrementJobView();
@@ -57,16 +66,29 @@ export default function JobDetail() {
   const form = useForm<ApplicationFormValues>({
     resolver: zodResolver(applicationSchema),
     defaultValues: {
-      applicantName: "",
-      applicantEmail: "",
+      applicantName: user?.name ?? "",
+      applicantEmail: user?.email ?? "",
+      phone: user?.phone ?? "",
       coverLetter: "",
-      resumeUrl: "",
     },
   });
 
+  const handleResumeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setResumeFile(file);
+    try {
+      const result = await uploadFile(file);
+      setUploadedResumeUrl(result.objectPath);
+      toast({ title: "Resume uploaded!", description: file.name });
+    } catch {
+      toast({ title: "Upload failed", variant: "destructive" });
+    }
+  };
+
   const onSubmit = (data: ApplicationFormValues) => {
     applyMutation.mutate(
-      { id: jobId, data },
+      { id: jobId, data: { ...data, resumeUrl: uploadedResumeUrl ?? undefined, profileImageUrl: user?.profileImageUrl ?? undefined } },
       {
         onSuccess: () => {
           setHasApplied(true);
@@ -279,17 +301,57 @@ export default function JobDetail() {
                         
                         <FormField
                           control={form.control}
-                          name="resumeUrl"
+                          name="phone"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Resume URL</FormLabel>
+                              <FormLabel>Phone Number</FormLabel>
                               <FormControl>
-                                <Input placeholder="https://linkedin.com/in/..." className="h-12" {...field} data-testid="input-apply-resume" />
+                                <Input placeholder="+1 555-0100" className="h-12" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
+
+                        <div className="sm:col-span-2">
+                          <Label className="text-sm font-medium mb-2 block">Resume / CV</Label>
+                          <div className="p-4 rounded-xl border border-dashed border-border hover:border-primary/40 hover:bg-primary/5 transition-colors">
+                            {uploadedResumeUrl ? (
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-sm">
+                                  <FileText className="w-4 h-4 text-emerald-500" />
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                    {resumeFile?.name ?? "Resume on file"}
+                                  </span>
+                                </div>
+                                <Label htmlFor="resume-upload" className="cursor-pointer text-xs text-primary hover:underline">Change</Label>
+                              </div>
+                            ) : (
+                              <Label htmlFor="resume-upload" className="flex flex-col items-center gap-2 cursor-pointer">
+                                {isUploading ? (
+                                  <>
+                                    <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                                    <span className="text-sm text-muted-foreground">Uploading... {progress}%</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="w-6 h-6 text-muted-foreground" />
+                                    <span className="text-sm text-muted-foreground">Click to upload your resume (PDF, DOC)</span>
+                                  </>
+                                )}
+                              </Label>
+                            )}
+                            <input
+                              id="resume-upload"
+                              type="file"
+                              accept=".pdf,.doc,.docx"
+                              className="sr-only"
+                              onChange={handleResumeChange}
+                              disabled={isUploading}
+                              data-testid="input-apply-resume"
+                            />
+                          </div>
+                        </div>
                         
                         <FormField
                           control={form.control}
