@@ -28,16 +28,18 @@ export default function Register() {
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  const onSubmit = async (data: FormValues) => {
-    try {
-      await registerUser(data);
-      toast({ title: "Account created!", description: "Welcome to TalentHub." });
-      navigate("/jobs");
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Registration failed";
-      toast({ title: "Registration failed", description: msg, variant: "destructive" });
-    }
-  };
+ const onSubmit = async (data: FormValues) => {
+  console.log(data);
+
+  localStorage.setItem("candidate", JSON.stringify(data));
+
+  toast({
+    title: "Account created!",
+    description: "Welcome to TalentHub.",
+  });
+
+  navigate("/jobs");
+};
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
